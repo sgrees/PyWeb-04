@@ -24,8 +24,8 @@ this is Ctrl-Shift-J and then click on the network tab. Try typing in some
 new 'Bottom Text' and observe the network requests being made, and note
 the imageID for the Ancient Aliens meme.
 
-TODO #1:
-The imageID for the Ancient Aliens meme is:
+DONE #1:
+The imageID for the Ancient Aliens meme is:  627067
 
 You will also need a way to identify headlines on the CNN page using
 BeautifulSoup. On the 'Unnecessary Knowledge Page', our fact was
@@ -53,11 +53,11 @@ Now we have to figure out how to isolate CNN headlines. Go to cnn.com and
 click on a headline and click 'Inspect'. If an element has a rightward
 pointing arrow, then you can click on it to see its contents.
 
-TODO #2:
+DONE #2:
 Each 'Top Stories' headline is wrapped in a tag that has:
-* name:
-* attribute name:
-* attribute value:
+* name: span
+* attribute name: class
+* attribute value: 'cd_headline-text'
 
 NOTE: We used the `find` method to find our fact element from unkno.com.
 The `find` method WILL ALSO work for finding a headline element from cnn.com,
@@ -101,33 +101,57 @@ To submit your homework:
 from bs4 import BeautifulSoup
 import requests
 
-def meme_it(fact):
-    url = 'http://cdn.meme.am/Instance/Preview'
-    params = {
-        'imageID': 2097248,
-        'text1': fact
-    }
+choice = input("Type 'news' to see a headline from CNN, or type 'factoid' to get a random fact")
+choice = str.lower(choice)
 
+def meme_it(choice):
+    if choice == "factoid":
+        url = 'http://cdn.meme.am/Instance/Preview'
+        params = {
+            'imageID': 2097248,
+            'text1': fact
+        }
+    elif choice == "news":
+        url = 'https://memegenerator.net/instance/11837275'
+        params = {
+            'imageID': 627067,
+            'text1': headline
+        }
+    else:
+        pass
+        # some exception error handling thing
     response = requests.get(url, params)
-
     return response.content
 
-
-def parse_fact(body):
+def parse(body):
     parsed = BeautifulSoup(body, 'html5lib')
-    fact = parsed.find('div', id='content')
-    return fact.text.strip()
+    if choice == "factoid":
+        fact = parsed.find('div', id='content')
+        return fact.text.strip()
+    elif choice == "news":
+        headline = parsed.find('span', class_='cd_headline-text')
+        return headline.text.strip()
+    else:
+        pass
+        # some exception error handling thing
 
-def get_fact():
-    response = requests.get('http://unkno.com')
-    return parse_fact(response.text)
+def get_info():
+    if choice == "factoid":
+        fact = requests.get('http://unkno.com')
+        return parse(fact.text)
+    elif choice == "news":
+        headline = requests.get('http://www.cnn.com')
+        return parse(headline.text)
+    else:
+        pass
+        # some exception error handling thing
 
 def process(path):
     args = path.strip("/").split("/")
 
-    fact = get_fact()
+    choice = get_info()
 
-    meme = meme_it(fact)
+    meme = meme_it(choice)
 
     return meme
 
@@ -137,7 +161,7 @@ def application(environ, start_response):
         path = environ.get('PATH_INFO', None)
         if path is None:
             raise NameError
-
+        func, args = resolve_path(path)
         body = process(path)
         status = "200 OK"
     except NameError:
