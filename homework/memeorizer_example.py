@@ -97,62 +97,46 @@ To submit your homework:
   * Submit a link to your PyWeb-04 fork repository!
 
 """
-
 from bs4 import BeautifulSoup
 import requests
 import html5lib
 
-choice = input("Type 'news' to see a headline from CNN, or type 'factoid' to get a random fact")
-choice = str.lower(choice)
-
-def meme_it(choice):
-    if choice == "factoid":
-        url = 'http://cdn.meme.am/Instance/Preview'
-        params = {
-            'imageID': 2097248,
-            'text1': fact
-        }
-    elif choice == "news":
-        url = 'https://memegenerator.net/instance/11837275'
-        params = {
-            'imageID': 627067,
-            'text1': headline
-        }
-    else:
-        pass
-        # some exception error handling thing
+def meme_it(fact, imageID):
+    url = 'http://cdn.meme.am/Instance/Preview'
+    params = {
+        'imageID': imageID,
+        'text1': fact
+    }
     response = requests.get(url, params)
     return response.content
 
-def parse(body):
+def parse_text(body, fact_arg, fact_kwargs):
     parsed = BeautifulSoup(body, 'html5lib')
-    if choice == "factoid":
-        fact = parsed.find('div', id='content')
-        return fact.text.strip()
-    elif choice == "news":
-        headline = parsed.find('span', class_='cd_headline-text')
-        return headline.text.strip()
-    else:
-        pass
-        # some exception error handling thing
+    # example fact_kwargs = {''id:'content'}
+    fact = parsed.find(fact_arg, **fact_kwargs)
+    # fact = parsed.find(fact_arg, id='content')
+    return fact.text.strip()
 
-def get_info():
-    if choice == "factoid":
-        fact = requests.get('http://unkno.com')
-        return parse(fact.text)
-    elif choice == "news":
-        headline = requests.get('http://www.cnn.com')
-        return parse(headline.text)
-    else:
-        pass
-        # some exception error handling thing
+def get_text(address, fact_arg, fact_kwargs):
+    response = requests.get(address)
+    return parse_text(response.text, fact_arg, fact_kwargs)
 
 def process(path):
+    # path example "fact/buzz"
     args = path.strip("/").split("/")
+    # arg example ["fact", "buzz"]
+    address, fact_arg, fact_kwargs = {
+        "fact": ["https://unkno.com", 'div', {'id': 'content'}],
+        "news": ["https://cnn.com", 'span', {'class_': 'cd_headline-text'}]
+    }.get(args[0])
+    # address = 'https://unkno.com, fact_arg = 'div', etc.
+    imageID = {
+        "buzz": 2092748,
+        "aliens": 235894
+    }.get(args[1])
 
-    choice = get_info()
-
-    meme = meme_it(choice)
+    fact = get_text(address, fact_arg, fact_kwargs)
+    meme = meme_it(fact, imageID)
 
     return meme
 
@@ -162,8 +146,9 @@ def application(environ, start_response):
         path = environ.get('PATH_INFO', None)
         if path is None:
             raise NameError
-        func, args = resolve_path(path)
-        body = process(path)
+        # func, args = resolve_path(path)
+        # body = func(*args)
+        body = process()
         status = "200 OK"
     except NameError:
         status = "404 Not Found"
